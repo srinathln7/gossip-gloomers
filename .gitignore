@@ -1,0 +1,9 @@
+# Ignore directories and subdirectories named 'store'
+store/
+
+# Ignore Go binary files
+*.exe
+*.test
+*.prof
+*.out
+
