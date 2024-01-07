@@ -1,12 +1,12 @@
 # Multi-Node Broadcast
 
-This repository contains an example implementation of a distributed system node using Maelstrom. Maelstrom is a messaging library designed for building distributed systems in Go.
+Refer to the challenge [here](https://fly.io/dist-sys/3b/)
 
 ## Overview
 
 The main components of the system include:
 
-- **Node Struct**: Represents a node in the distributed system, encapsulating the Maelstrom node, mutexes for synchronization, and a map to track received broadcast messages.
+- **Node Struct**: Represents a node in the distributed system, encapsulating the Maelstrom node, waitgroups for go routine co-ordination, and a map to track received broadcast messages.
 
 - **TopologyMsg Struct**: Defines the structure for the JSON message used to communicate network topology.
 

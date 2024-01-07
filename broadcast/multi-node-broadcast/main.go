@@ -11,7 +11,6 @@ import (
 // Node represents a node in the distributed system.
 type Node struct {
 	n  *maelstrom.Node // Reference to the Maelstrom node
-	mu sync.RWMutex    // Mutex for concurrent access to shared resources
 	wg sync.WaitGroup  // WaitGroup to wait for goroutines to finish
 
 	id      string           // Unique identifier for the node
@@ -58,18 +57,12 @@ func (node *Node) hBroadcast(msg maelstrom.Message) error {
 	val := int(body["message"].(float64))
 
 	// Check if the node has already received or broadcasted the message, discard if yes
-	node.mu.RLock()
 	if _, exists := node.recvMsg[val]; exists {
-		node.mu.RUnlock()
 		return nil
 	}
-	node.mu.RUnlock()
 
-	// Support concurrent writes on the map
-	// If the message has not been broadcasted before, record it in the node's memory
-	node.mu.Lock()
+	// Otherwise, record it in the node's memory
 	node.recvMsg[val] = struct{}{}
-	node.mu.Unlock()
 
 	// Retrieve the neighbors list of a particular node
 	neighbours := NwTopology[node.n.ID()]
@@ -105,11 +98,9 @@ func (node *Node) hRead(msg maelstrom.Message) error {
 	res["type"] = "read_ok"
 	var msgs []int
 
-	node.mu.RLock()
 	for val := range node.recvMsg {
 		msgs = append(msgs, val)
 	}
-	node.mu.RUnlock()
 
 	res["messages"] = msgs
 	return node.n.Reply(msg, res)
