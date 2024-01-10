@@ -7,7 +7,7 @@ import (
 
 type KVStore struct {
 	store map[int]struct{}
-	mu    sync.Mutex
+	mu    sync.RWMutex
 }
 
 // newCache : initializes and returns a new key-value store
@@ -45,8 +45,8 @@ func (kv *KVStore) SetAll(vals []int) error {
 // Get: Returns all the values specified in the store
 func (kv *KVStore) Get() []int {
 
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
 
 	var keys []int
 	for key := range kv.store {

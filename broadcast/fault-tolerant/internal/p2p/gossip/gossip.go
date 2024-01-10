@@ -2,10 +2,15 @@ package gossip
 
 import (
 	"broadcast/internal/cache"
+	"broadcast/internal/node"
 	"time"
-
-	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
+
+// NWTopology  Structure of the network topology.
+type NWTopology struct {
+	Type     string              `json:"type"`
+	Topology map[string][]string `json:"topology"`
+}
 
 type Gossip struct {
 	ticker *time.Ticker
@@ -29,7 +34,7 @@ func NewGossip(d time.Duration) *Gossip {
 	}
 }
 
-func (gossip *Gossip) Start(kv *cache.KVStore, node *maelstrom.Node, maxNodes int) {
+func (gossip *Gossip) Start(kv *cache.KVStore, node *node.Node) {
 
 	go func() {
 		for {
@@ -38,7 +43,7 @@ func (gossip *Gossip) Start(kv *cache.KVStore, node *maelstrom.Node, maxNodes in
 				gossip.Stop()
 
 			case <-gossip.ticker.C:
-				err := doGossip(kv, node, maxNodes)
+				err := doGossip(kv, node)
 				if err != nil {
 					return
 				}
@@ -53,9 +58,9 @@ func (gossip *Gossip) Stop() {
 	gossip.done <- true
 }
 
-func doGossip(kv *cache.KVStore, node *maelstrom.Node, maxNodes int) error {
+func doGossip(kv *cache.KVStore, node *node.Node) error {
 
-	peers := node.NodeIDs()
+	peers := node.GetTopology()
 	data := kv.Get()
 
 	body := &GossipMsgs{
@@ -65,18 +70,16 @@ func doGossip(kv *cache.KVStore, node *maelstrom.Node, maxNodes int) error {
 
 	for _, peer := range peers {
 
-		if peer == node.ID() {
+		if peer == node.N.ID() {
 			continue
 		}
 
 		go func(peer string) {
 			for {
-				err := node.Send(peer, body)
+				err := node.N.Send(peer, body)
 				if err == nil {
 					break
 				}
-
-				node.Run()
 			}
 
 		}(peer)
