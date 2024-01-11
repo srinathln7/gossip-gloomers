@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"broadcast/internal/cache"
 	"broadcast/internal/node"
 	"time"
 )
@@ -34,7 +33,7 @@ func NewGossip(d time.Duration) *Gossip {
 	}
 }
 
-func (gossip *Gossip) Start(kv *cache.KVStore, node *node.Node) {
+func (gossip *Gossip) Start(node *node.Node) {
 
 	go func() {
 		for {
@@ -43,7 +42,7 @@ func (gossip *Gossip) Start(kv *cache.KVStore, node *node.Node) {
 				gossip.Stop()
 
 			case <-gossip.ticker.C:
-				err := doGossip(kv, node)
+				err := doGossip(node)
 				if err != nil {
 					return
 				}
@@ -58,10 +57,10 @@ func (gossip *Gossip) Stop() {
 	gossip.done <- true
 }
 
-func doGossip(kv *cache.KVStore, node *node.Node) error {
+func doGossip(node *node.Node) error {
 
 	peers := node.GetTopology()
-	data := kv.Get()
+	data := node.Store.Get()
 
 	body := &GossipMsgs{
 		Type: "gossip",

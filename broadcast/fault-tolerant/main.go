@@ -28,7 +28,6 @@ func main() {
 		v := int(m.(float64))
 		node.Store.Set(v)
 
-		//rsp := &model.SimpleResp{Type: "broadcast_ok"}
 		return node.N.Reply(msg, map[string]interface{}{
 			"type": "broadcast_ok",
 		})
@@ -67,7 +66,7 @@ func main() {
 
 		node.SetTopology(body.Topology[node.N.ID()])
 
-		gossip.Start(&node.Store, node)
+		gossip.Start(node)
 		return node.N.Reply(msg, map[string]interface{}{
 			"type": "topology_ok",
 		})
