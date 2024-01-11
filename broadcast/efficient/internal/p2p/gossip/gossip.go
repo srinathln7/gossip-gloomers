@@ -23,7 +23,7 @@ type GossipMsg struct {
 
 type GossipMsgs struct {
 	Type string `json:"type"`
-	Msgs []int  `json:"messsages"`
+	Msgs []int  `json:"msgs"`
 }
 
 func NewGossip(d time.Duration) *Gossip {
