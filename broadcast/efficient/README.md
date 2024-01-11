@@ -69,6 +69,7 @@ The `gossip.go` file contains the implementation of the gossip mechanism used fo
 To run the test, execute the following command:
 
 ```bash
+m test -w broadcast --bin ./broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --nemesis partition
 
 m test -w broadcast --bin ./broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
 ```
