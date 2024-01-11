@@ -2,12 +2,10 @@ package cache
 
 import (
 	"errors"
-	"sync"
 )
 
 type KVStore struct {
 	store map[int]struct{}
-	mu    sync.RWMutex
 }
 
 // newCache : initializes and returns a new key-value store
@@ -19,9 +17,6 @@ func NewCache() *KVStore {
 
 // Set: Sets the given value in the key-value store
 func (kv *KVStore) Set(val int) error {
-
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
 
 	if _, exists := kv.store[val]; exists {
 		return errors.New("specified key already exists in the cache")
@@ -44,9 +39,6 @@ func (kv *KVStore) SetAll(vals []int) error {
 
 // Get: Returns all the values specified in the store
 func (kv *KVStore) Get() []int {
-
-	kv.mu.RLock()
-	defer kv.mu.RUnlock()
 
 	var keys []int
 	for key := range kv.store {

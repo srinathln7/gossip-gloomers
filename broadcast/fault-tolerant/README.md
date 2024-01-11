@@ -1,43 +1,77 @@
-# Fault-Tolerant Broadcast
+# Fault-Tolerant Broadcast System
 
-Refer to the challenge [here](https://fly.io/dist-sys/3c/)
+This repository contains a fault-tolerant broadcast system built on top of [Maelstrom](https://github.com/jepsen-io/maelstrom). The system utilizes a simple yet effective approach for communication between nodes in a distributed network. This README provides an overview of the components and functionalities of the system.
 
-## Overview
+## Challenge
 
-The main components of the system include:
+Refer to the challenge details [here](https://fly.io/dist-sys/3c/).
 
-- **Node Struct**: Represents a node in the distributed system, encapsulating the Maelstrom node, waitgroups for go routine co-ordination, and a map to track received broadcast messages.
+## Broadcast System
 
-- **TopologyMsg Struct**: Defines the structure for the JSON message used to communicate network topology.
+The broadcast system consists of three main components: `main.go`, `node.go`, and `gossip.go`. Each component plays a specific role in the overall functionality of the system.
 
-- **NwTopology Map**: Stores the network topology shared across all nodes.
+### `main.go`
 
+The `main.go` file serves as the entry point of the system. It performs the following tasks:
 
-## Components
+- Creates a new `Node` using the Maelstrom library.
+- Defines handlers for different message types, including "broadcast," "gossip," "read," and "topology."
+- Runs the Maelstrom node and initializes a gossip mechanism for broadcasting messages.
 
-### Node Struct
+**Highlighted Features:**
+- Handles multiple message types using Maelstrom.
+- Utilizes a KV store for each node to manage locally stored data.
+- Implements a gossip mechanism for broadcasting messages to peers.
 
-The `Node` struct represents a node in the distributed system and includes the following key components:
+### `node.go`
 
+The `node.go` file defines the `Node` struct, representing a node in the distributed system. Key features include:
 
-### TopologyMsg Struct
+- Represents a node in the distributed system, maintaining information such as the Maelstrom node, KV store, and topology.
+- Provides methods for setting and getting the network topology.
+- Utilizes the Maelstrom library for communication in a distributed system.
 
-The `TopologyMsg` struct defines the structure of the JSON message used to communicate network topology. It includes a `Type` field and a `Topology` field, which represents the network topology as a map.
+**Highlighted Features:**
+- Node structure with its own KV store and network topology.
+- Methods for managing and retrieving network topology.
 
-### NwTopology Map
+### `gossip.go`
 
-The `NwTopology` map stores the network topology shared across all nodes.
+The `gossip.go` file contains the implementation of the gossip mechanism used for broadcasting messages among nodes. Important features include:
 
-## Message Handlers
+- Implements a gossip mechanism for broadcasting messages to peers.
+- Uses a ticker to initiate gossip periodically.
+- Starts and stops the gossip mechanism, allowing flexibility in its usage.
 
-- **hBroadcast**: Handles the "broadcast" message type. It stores locally broadcasted values and broadcasts them to neighbors.
-  
-- **hRead**: Handles the "read" message type. Responds with a list of received messages.
+**Highlighted Features:**
+- Gossip mechanism for broadcasting messages to peers.
+- Ticker-based initiation for periodic gossip.
+- Start and stop methods for managing the gossip mechanism.
 
-- **hTopology**: Handles the "topology" message type. Stores the network topology.
+## System Operation
+
+1. **Initialization:**
+   - Each node is initialized with its Maelstrom node, KV store, and topology.
+   - Handlers for different message types are defined, enabling the node to process broadcast, gossip, read, and topology messages.
+
+2. **Message Broadcasting:**
+   - The system uses the Maelstrom library to handle different message types.
+   - The "broadcast" message type triggers the broadcast of messages to neighbors through the gossip mechanism.
+
+3. **Gossip Mechanism:**
+   - The gossip mechanism periodically sends messages to random peers in the network, facilitating message propagation.
+
+4. **Topology Management:**
+   - The system allows nodes to set and get their network topology, providing flexibility in managing communication links.
 
 ## Test
 
-```
+To run the test, execute the following command:
+
+```bash
 m test -w broadcast --bin ./broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
 ```
+
+## Conclusion
+
+The fault-tolerant broadcast system offers a straightforward and efficient way for nodes in a distributed network to communicate and share information. The combination of Maelstrom and a gossip protocol provides a modular and customizable design suitable for various distributed system scenarios.

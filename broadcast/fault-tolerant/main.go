@@ -28,6 +28,8 @@ func main() {
 		v := int(m.(float64))
 		node.Store.Set(v)
 
+		gossip.Start(node)
+
 		return node.N.Reply(msg, map[string]interface{}{
 			"type": "broadcast_ok",
 		})
@@ -66,7 +68,6 @@ func main() {
 
 		node.SetTopology(body.Topology[node.N.ID()])
 
-		gossip.Start(node)
 		return node.N.Reply(msg, map[string]interface{}{
 			"type": "topology_ok",
 		})
