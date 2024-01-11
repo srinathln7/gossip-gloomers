@@ -27,7 +27,6 @@ func main() {
 		m := body["message"]
 		v := int(m.(float64))
 		node.Store.Set(v)
-
 		gossip.Start(node)
 
 		return node.N.Reply(msg, map[string]interface{}{

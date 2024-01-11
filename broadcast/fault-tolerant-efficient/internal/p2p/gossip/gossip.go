@@ -16,11 +16,6 @@ type Gossip struct {
 	done   chan bool
 }
 
-type GossipMsg struct {
-	Type string `json:"type"`
-	Msg  int    `json:"msg"`
-}
-
 type GossipMsgs struct {
 	Type string `json:"type"`
 	Msgs []int  `json:"msgs"`

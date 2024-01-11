@@ -68,12 +68,19 @@ The `gossip.go` file contains the implementation of the gossip mechanism used fo
 
 To run the test, execute the following command:
 
-```bash
+```
+
+# 3c
+m test -w broadcast --bin ./broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
+
+# 3d
 m test -w broadcast --bin ./broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --nemesis partition
 
-m test -w broadcast --bin ./broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
+#3e
+m test -w broadcast --bin ./broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --nemesis partition
+
 ```
 
 ## Conclusion
 
-The fault-tolerant broadcast system offers a straightforward and efficient way for nodes in a distributed network to communicate and share information. The combination of Maelstrom and a gossip protocol provides a modular and customizable design suitable for various distributed system scenarios.
+The fault-tolerant broadcast system offers a straightforward and efficient way for nodes in a distributed network to communicate and share information. The combination of Maelstrom and a gossip protocol provides a modular and customizable design suitable for various distributed system scenarios. All tests 3c, 3d, 3e pass with the above code.
