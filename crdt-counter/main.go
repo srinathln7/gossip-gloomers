@@ -7,16 +7,14 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
-
-	p2p "counter/internal/p2p/gossip"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
 
+// Counter: Represents the Global Counter
 type Counter struct {
 	value int
-	mu    sync.Mutex
+	mu    sync.RWMutex
 }
 
 func main() {
@@ -28,8 +26,6 @@ func main() {
 	// Create a new maelstrom node and a seq.consistent key-value store
 	node := maelstrom.NewNode()
 	kv := maelstrom.NewSeqKV(node)
-
-	gossip := p2p.NewGossip(100 * time.Millisecond)
 
 	node.Handle("add", func(msg maelstrom.Message) error {
 
@@ -49,6 +45,8 @@ func main() {
 		if err != nil {
 			val = 0
 		}
+		counter.mu.Unlock()
+
 		result := val + delta
 
 		// Run a Compare and swap until it is successful
@@ -66,31 +64,10 @@ func main() {
 				break
 			}
 		}
-		counter.mu.Unlock()
-
-		gossip.Start(node, kv)
 
 		return node.Reply(msg, map[string]interface{}{
 			"type": "add_ok",
 		})
-
-	})
-
-	node.Handle("gossip", func(msg maelstrom.Message) error {
-
-		var body p2p.GossipMsg
-		if err := json.Unmarshal(msg.Body, &body); err != nil {
-			return err
-		}
-
-		// Value received from the peer nodes through the gossip protocol
-		recvVal := body.Value
-
-		counter.mu.Lock()
-		counter.value = max(counter.value, recvVal)
-		counter.mu.Unlock()
-
-		return node.Reply(msg, body)
 
 	})
 
@@ -109,18 +86,15 @@ func main() {
 			body["value"] = 0
 		}
 
-		counter.value = max(existingValue, counter.value)
-		body["value"] = counter.value
-
 		counter.mu.Unlock()
 
+		body["value"] = existingValue
 		body["type"] = "read_ok"
 		return node.Reply(msg, body)
 
 	})
 
 	if err := node.Run(); err != nil {
-		gossip.Stop()
 		log.Printf("ERROR: %s", err)
 		os.Exit(1)
 	}
