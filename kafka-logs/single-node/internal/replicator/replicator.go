@@ -1,7 +1,7 @@
 package replicator
 
 import (
-	"logs/internal/store"
+	store "logs/internal/kafka-store"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )

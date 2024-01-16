@@ -12,7 +12,6 @@ import (
 func main() {
 
 	replicator := replicator.NewReplicator()
-	//store := store.NewKafkaStore()
 
 	replicator.Node.Handle("send", func(msg maelstrom.Message) error {
 		var body map[string]any
