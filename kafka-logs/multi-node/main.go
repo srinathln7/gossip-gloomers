@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"logs/internal/replicator"
@@ -35,7 +36,7 @@ func main() {
 		} else {
 
 			// Delegate all writes to the `Leader`
-			err := replicator.Node.Send(replicator.Leader, body)
+			_, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
 			if err != nil {
 				return err
 			}
@@ -80,7 +81,8 @@ func main() {
 			replicator.Store.CommitOffsets(offsetMap)
 		} else {
 			// Delegate all writes to the `Leader`
-			err := replicator.Node.Send(replicator.Leader, body)
+			//err := replicator.Node.Send(replicator.Leader, body)
+			_, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
 			if err != nil {
 				return err
 			}
