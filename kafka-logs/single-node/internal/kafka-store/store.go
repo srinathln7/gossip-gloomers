@@ -44,11 +44,8 @@ func (ks *KafkaStore) Get(req map[string]any) map[string][][2]int {
 			continue
 		}
 
-		msgs := dataStore[startOffset:]
-		for _, msg := range msgs {
-			resData := [2]int{startOffset, msg}
-			resMap[key] = append(resMap[key], resData)
-			startOffset++
+		for i := startOffset; i < len(dataStore); i++ {
+			resMap[key] = append(resMap[key], [2]int{i, dataStore[i]})
 		}
 
 	}
