@@ -12,17 +12,10 @@ The main.go file serves as the entry point of the counter application. It initia
 
 Key Highlights:
 
-- Addition (add) operation: Increments the counter value based on the received delta and performs a compare-and-swap operation for atomic updates in a concurrent environment.
-- Read (read) operation: Retrieves and returns the current counter value from the distributed key-value store.
-
-2. internal/counter/counter.go
-The counter.go file defines the Counter struct, representing the global counter. It includes a read-write mutex to manage concurrent access to the counter value.
-
-Key Highlights:
-
 - Represents the global counter.
 - Uses a read-write mutex for concurrent access to the counter value.
-
+- Addition (add) operation: Increments the counter value based on the received delta and performs a compare-and-swap operation for atomic updates in a concurrent environment.
+- Read (read) operation: Retrieves and returns the current counter value from the distributed key-value store.
 
 ## Test
 
