@@ -17,15 +17,16 @@ type Counter struct {
 	mu    sync.RWMutex
 }
 
-func main() {
+const GLOBAL_RESULT_KEY = "final_result"
 
-	// Initialize the global counter and a global key
-	counter := &Counter{value: 0}
-	const key = "final_result"
+func main() {
 
 	// Create a new maelstrom node and a seq.consistent key-value store
 	node := maelstrom.NewNode()
 	kv := maelstrom.NewSeqKV(node)
+
+	// Initialize the local counter
+	counter := &Counter{value: 0}
 
 	node.Handle("add", func(msg maelstrom.Message) error {
 
@@ -41,7 +42,7 @@ func main() {
 
 		counter.mu.Lock()
 		// Retreive the current counter value
-		val, err := kv.ReadInt(context.Background(), key)
+		val, err := kv.ReadInt(context.Background(), GLOBAL_RESULT_KEY)
 		if err != nil {
 			val = 0
 		}
@@ -59,7 +60,7 @@ func main() {
 			// CompareAndSwap operation is atomic, meaning that the check for the current value and the update are treated as a single, indivisible operation.
 			// Here, the operation goes through only the key "result" value still reads as the one captured by the `val` variable. If not, some other process
 			// has already updated the key and keep re-trying
-			err = kv.CompareAndSwap(context.Background(), key, val, result, true)
+			err = kv.CompareAndSwap(context.Background(), GLOBAL_RESULT_KEY, val, result, true)
 			if err == nil {
 				break
 			}
@@ -80,7 +81,7 @@ func main() {
 
 		counter.mu.Lock()
 
-		existingValue, err := kv.ReadInt(context.Background(), key)
+		existingValue, err := kv.ReadInt(context.Background(), GLOBAL_RESULT_KEY)
 
 		if err != nil {
 			body["value"] = 0
