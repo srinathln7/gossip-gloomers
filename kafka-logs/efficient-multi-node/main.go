@@ -7,6 +7,8 @@ import (
 	"logs/internal/replicator"
 	"os"
 
+	"errors"
+
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
 
@@ -17,7 +19,6 @@ func main() {
 
 	replicator.Node.Handle("send", func(msg maelstrom.Message) error {
 		var body map[string]any
-
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
 			return err
@@ -25,9 +26,13 @@ func main() {
 
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
+		leader := replicator.GetLeader()
+		if leader == "" {
+			return errors.New("error: leader not yet set")
+		}
 
 		// Accept write request only if the node is the leader
-		if replicator.Node.ID() == replicator.Leader {
+		if replicator.Node.ID() == leader {
 			key := body["key"].(string)
 			val := int(body["msg"].(float64))
 			offset := replicator.Store.Set(key, val)
@@ -66,21 +71,12 @@ func main() {
 			})
 		} else {
 
-			// Implement a simple for loop to make sure that the leader is set before redirecting requests
-			for {
-				if replicator.Leader == "" {
-					continue
-				}
-				break
-			}
-
 			log.Println("redirecting all write requests to the leader")
-			resp, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
+			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
 			if err != nil {
-				log.Panicf("eror sending update to leader: %s", replicator.Leader)
+				log.Panicf("eror sending update to leader: %s", leader)
 				return err
 			}
-
 			return replicator.Node.Reply(msg, resp.Body)
 		}
 	})
@@ -126,9 +122,13 @@ func main() {
 
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
+		leader := replicator.GetLeader()
+		if leader == "" {
+			return errors.New("error: leader not yet set")
+		}
 
 		// Accept write request only if the node is the leader
-		if replicator.Node.ID() == replicator.Leader {
+		if replicator.Node.ID() == leader {
 			offsetMap := body["offsets"].(map[string]any)
 			replicator.Store.CommitOffsets(offsetMap)
 
@@ -148,18 +148,9 @@ func main() {
 				}
 			}
 		} else {
-
-			// Implement a simple for loop to make sure that the leader is set before redirecting requests
-			for {
-				if replicator.Leader == "" {
-					continue
-				}
-				break
-			}
-
 			// Delegate all writes to the `Leader`
-			log.Printf("redirecting all write requests to leader %s", replicator.Leader)
-			_, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
+			log.Printf("redirecting all write requests to leader %s", leader)
+			_, err := replicator.Node.SyncRPC(context.Background(), leader, body)
 			if err != nil {
 				return err
 			}
