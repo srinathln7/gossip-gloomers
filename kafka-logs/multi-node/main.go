@@ -35,7 +35,11 @@ func main() {
 			result = replicator.Store.Set(key, val)
 		} else {
 
-			// Delegate all writes to the `Leader`
+			// Delegate all writes to the `Leader`. Just `Send` wont work since writes and sync access to STDOUT.
+			// Only `syncRPC` works because we need to wait until our leader responds to our write requests to proceed further.
+			// Looking into the implementation of both `send` and `syncRPC` we see the latter is a wrapper around the former
+			// with repeated retries until the context is either cancelled or the messgae is
+			//err := replicator.Node.Send(replicator.Leader, body)
 			_, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
 			if err != nil {
 				return err
@@ -84,7 +88,6 @@ func main() {
 			replicator.Store.CommitOffsets(offsetMap)
 		} else {
 			// Delegate all writes to the `Leader`
-			//err := replicator.Node.Send(replicator.Leader, body)
 			_, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
 			if err != nil {
 				return err
