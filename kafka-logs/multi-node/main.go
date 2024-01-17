@@ -76,6 +76,9 @@ func main() {
 
 		offsetMap := body["offsets"].(map[string]any)
 
+		// Run the leader election algorithm before sending the requests
+		replicator.RunLeaderElection()
+
 		// Accept write request only if the node is the leader
 		if replicator.Node.ID() == replicator.Leader {
 			replicator.Store.CommitOffsets(offsetMap)
