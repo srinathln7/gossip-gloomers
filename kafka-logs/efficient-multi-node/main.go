@@ -14,7 +14,7 @@ import (
 
 func main() {
 
-	// Each node will get its own local kafka store and linearizable KV
+	// Each node will get its own local kafka store and linearizable KV through their own instances of a replicator
 	replicator := replicator.NewReplicator()
 
 	replicator.Node.Handle("send", func(msg maelstrom.Message) error {
@@ -27,9 +27,6 @@ func main() {
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
 		leader := replicator.GetLeader()
-		if leader == "" {
-			return errors.New("error: leader not yet set")
-		}
 
 		// Accept write request only if the node is the leader
 		if replicator.Node.ID() == leader {
@@ -49,7 +46,7 @@ func main() {
 				log.Printf("propogating updates to the follower: %s", follower)
 				resp, err := replicator.Node.SyncRPC(context.Background(), follower, body)
 				if err != nil {
-					log.Panicf("eror sending update to follower: %s", follower)
+					log.Panicf("error %s while sending update to follower: %s", err.Error(), follower)
 					return err
 				}
 
@@ -74,7 +71,7 @@ func main() {
 			log.Println("redirecting all write requests to the leader")
 			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
 			if err != nil {
-				log.Panicf("eror sending update to leader: %s", leader)
+				log.Panicf("error %s while sending update to leader: %s", err.Error(), leader)
 				return err
 			}
 			return replicator.Node.Reply(msg, resp.Body)
@@ -163,7 +160,6 @@ func main() {
 
 	replicator.Node.Handle("propogate_commit_update", func(msg maelstrom.Message) error {
 		var body map[string]any
-
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
 			return err
@@ -180,7 +176,6 @@ func main() {
 	replicator.Node.Handle("list_committed_offsets", func(msg maelstrom.Message) error {
 
 		var body map[string]any
-
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
 			return err

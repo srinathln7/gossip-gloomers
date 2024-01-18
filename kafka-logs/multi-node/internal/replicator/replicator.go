@@ -12,12 +12,12 @@ import (
 const CLUSTER_LEADER = "cluster_leader"
 
 type Replicator struct {
-	mu sync.Mutex
-	lv *maelstrom.KV
+	mu     sync.Mutex
+	lv     *maelstrom.KV
+	leader string
 
-	Node   *maelstrom.Node
-	Store  *store.KafkaStore
-	Leader string
+	Node  *maelstrom.Node
+	Store *store.KafkaStore
 }
 
 func NewReplicator() *Replicator {
@@ -36,7 +36,7 @@ func (r *Replicator) RunLeaderElection() {
 	defer r.mu.Unlock()
 
 	// If the node finds in its local state that the leader has not been assigned yet,
-	if r.Leader == "" {
+	if r.leader == "" {
 
 		// Attempt to acquire the leadership if no leader has been assigned yet
 		err := r.lv.CompareAndSwap(context.Background(), CLUSTER_LEADER, r.Node.ID(), r.Node.ID(), true)
@@ -52,10 +52,18 @@ func (r *Replicator) RunLeaderElection() {
 				log.Panic("error during leader election algorithm")
 			} else {
 				// If successful, update the local state with the retrieved leader information
-				r.Leader = leader.(string)
+				r.leader = leader.(string)
 			}
 		}
 	} else {
-		r.Leader = r.Node.ID()
+		r.leader = r.Node.ID()
 	}
+}
+
+func (r *Replicator) GetLeader() string {
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.leader
 }

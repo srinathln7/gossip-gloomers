@@ -62,11 +62,5 @@ func (r *Replicator) RunLeaderElection() {
 func (r *Replicator) GetLeader() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	// If no leader is set - initiate the leader election algorithm
-	if r.leader == "" {
-		r.RunLeaderElection()
-	}
-
 	return r.leader
 }

@@ -28,10 +28,11 @@ func main() {
 
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
+		leader := replicator.GetLeader()
 
 		var result int
 		// Accept write request only if the node is the leader
-		if replicator.Node.ID() == replicator.Leader {
+		if replicator.Node.ID() == leader {
 			result = replicator.Store.Set(key, val)
 		} else {
 
@@ -40,10 +41,11 @@ func main() {
 			// Looking into the implementation of both `send` and `syncRPC` we see the latter is a wrapper around the former
 			// with repeated retries until the context is either cancelled or the messgae is
 			//err := replicator.Node.Send(replicator.Leader, body)
-			_, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
+			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
 			if err != nil {
 				return err
 			}
+			return replicator.Node.Reply(msg, resp.Body)
 		}
 
 		return replicator.Node.Reply(msg, map[string]any{
@@ -82,13 +84,14 @@ func main() {
 
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
+		leader := replicator.GetLeader()
 
 		// Accept write request only if the node is the leader
-		if replicator.Node.ID() == replicator.Leader {
+		if replicator.Node.ID() == leader {
 			replicator.Store.CommitOffsets(offsetMap)
 		} else {
 			// Delegate all writes to the `Leader`
-			_, err := replicator.Node.SyncRPC(context.Background(), replicator.Leader, body)
+			_, err := replicator.Node.SyncRPC(context.Background(), leader, body)
 			if err != nil {
 				return err
 			}
