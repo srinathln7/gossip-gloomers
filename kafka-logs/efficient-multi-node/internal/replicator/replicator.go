@@ -15,7 +15,7 @@ type Replicator struct {
 	lv     *maelstrom.KV
 	leader string
 
-	mu    sync.RWMutex
+	Mu    sync.RWMutex
 	Node  *maelstrom.Node
 	Store *store.KafkaStore
 }
@@ -27,13 +27,14 @@ func NewReplicator() *Replicator {
 		Node:  node,
 		Store: store.NewKafkaStore(),
 		lv:    maelstrom.NewLinKV(node),
+		Mu:    sync.RWMutex{},
 	}
 }
 
 func (r *Replicator) RunLeaderElection() {
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	// r.mu.Lock()
+	// defer r.mu.Unlock()
 
 	// If the node finds in its local state that the leader has not been assigned yet,
 	if r.leader == "" {
@@ -60,7 +61,7 @@ func (r *Replicator) RunLeaderElection() {
 }
 
 func (r *Replicator) GetLeader() string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	// r.mu.RLock()
+	// defer r.mu.RUnlock()
 	return r.leader
 }
