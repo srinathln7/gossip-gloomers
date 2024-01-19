@@ -6,7 +6,6 @@ import (
 	"log"
 	"logs/internal/replicator"
 	"os"
-	"sync"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -106,9 +105,8 @@ func main() {
 			return err
 		}
 
-		var mu sync.RWMutex
-		mu.RLock()
-		defer mu.RUnlock()
+		replicator.Mu.RLock()
+		defer replicator.Mu.RUnlock()
 
 		data := body["offsets"].(map[string]any)
 		res := replicator.Store.Get(data)
@@ -167,15 +165,13 @@ func main() {
 	replicator.Node.Handle("list_committed_offsets", func(msg maelstrom.Message) error {
 
 		var body map[string]any
-
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
 			return err
 		}
 
-		var mu sync.RWMutex
-		mu.RLock()
-		defer mu.RUnlock()
+		replicator.Mu.RLock()
+		defer replicator.Mu.RUnlock()
 
 		keys := body["keys"].([]any)
 		return replicator.Node.Reply(msg, map[string]any{

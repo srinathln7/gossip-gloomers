@@ -45,7 +45,7 @@ func (r *Replicator) RunLeaderElection() {
 
 			// If CompareAndSwap fails, it means someone else may have acquired leadership
 			// Retrieve the current leader from the key-value store
-			leader, err0 := r.lv.Read(context.Background(), "leader")
+			leader, err0 := r.lv.Read(context.Background(), CLUSTER_LEADER)
 			if err0 != nil {
 				_ = fmt.Errorf(err0.Error())
 			} else {
