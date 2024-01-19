@@ -30,59 +30,55 @@ func main() {
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
 		leader := replicator.GetLeader()
+		if leader == "" {
+			return errors.New("error: leader not yet set")
+		}
 
-		for {
+		// Accept write request only if the node is the leader
+		if replicator.Node.ID() == leader {
+			offset := replicator.Store.Set(key, val)
 
-			if leader == "" {
-				continue
-			}
+			// Propogate the updates to the followers
+			body["type"] = "propogate_send_update"
 
-			// Accept write request only if the node is the leader
-			if replicator.Node.ID() == leader {
-				offset := replicator.Store.Set(key, val)
-
-				// Propogate the updates to the followers
-				body["type"] = "propogate_send_update"
-
-				nodeList := replicator.Node.NodeIDs()
-				for _, follower := range nodeList {
-					if follower == replicator.Node.ID() {
-						continue
-					}
-
-					log.Printf("propogating updates to the follower: %s", follower)
-					resp, err := replicator.Node.SyncRPC(context.Background(), follower, body)
-					if err != nil {
-						log.Panicf("error %s while sending update to follower: %s", err.Error(), follower)
-						return err
-					}
-
-					var respMap map[string]any
-					if err := json.Unmarshal(resp.Body, &respMap); err != nil {
-						return err
-					}
-
-					recvOffSet := int(respMap["offset"].(float64))
-					log.Println("checking for db consistency")
-					if recvOffSet != offset {
-						log.Panicf("consistency error: leader sent %v while follower received %v", offset, recvOffSet)
-					}
+			nodeList := replicator.Node.NodeIDs()
+			for _, follower := range nodeList {
+				if follower == replicator.Node.ID() {
+					continue
 				}
 
-				return replicator.Node.Reply(msg, map[string]any{
-					"type":   "send_ok",
-					"offset": offset,
-				})
-			} else {
-
-				log.Println("redirecting all write requests to the leader")
-				resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
+				log.Printf("propogating updates to the follower: %s", follower)
+				resp, err := replicator.Node.SyncRPC(context.Background(), follower, body)
 				if err != nil {
-					log.Panicf("error %s while sending update to leader: %s", err.Error(), leader)
+					log.Panicf("error %s while sending update to follower: %s", err.Error(), follower)
 					return err
 				}
-				return replicator.Node.Reply(msg, resp.Body)
+
+				var respMap map[string]any
+				if err := json.Unmarshal(resp.Body, &respMap); err != nil {
+					return err
+				}
+
+				recvOffSet := int(respMap["offset"].(float64))
+				log.Println("checking for db consistency")
+				if recvOffSet != offset {
+					log.Panicf("consistency error: leader sent %v while follower received %v", offset, recvOffSet)
+				}
 			}
+
+			return replicator.Node.Reply(msg, map[string]any{
+				"type":   "send_ok",
+				"offset": offset,
+			})
+		} else {
+
+			log.Println("redirecting all write requests to the leader")
+			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
+			if err != nil {
+				log.Panicf("error %s while sending update to leader: %s", err.Error(), leader)
+				return err
+			}
+			return replicator.Node.Reply(msg, resp.Body)
 		}
 
 	})

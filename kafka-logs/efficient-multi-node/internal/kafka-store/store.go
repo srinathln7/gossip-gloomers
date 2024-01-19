@@ -39,6 +39,7 @@ func (ks *KafkaStore) Get(req map[string]any) map[string][][2]int {
 	for key, data := range req {
 		startOffset := int(data.(float64))
 		dataStore, exists := ks.Data[key]
+
 		if !exists {
 			continue
 		}
@@ -46,6 +47,7 @@ func (ks *KafkaStore) Get(req map[string]any) map[string][][2]int {
 		for i := startOffset; i < len(dataStore); i++ {
 			resMap[key] = append(resMap[key], [2]int{i, dataStore[i]})
 		}
+
 	}
 
 	return resMap

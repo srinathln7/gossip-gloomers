@@ -1,5 +1,8 @@
 # Distributed Log Replicator
 
+In this challenge, both leaders and followers accept read requests as opposed to the multi-node kafka challenge. Furthermore, the leader pushes all the updates actively 
+to the followers so that they get the poll latest data.
+
 ## Components
 
 ### `main.go`

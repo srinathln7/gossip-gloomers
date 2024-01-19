@@ -1,6 +1,7 @@
 # Distributed Log Replicator
 
-This repository contains code for a distributed log replicator that utilizes a linearizable key-value store for leader election and coordination.
+This repository contains code for a distributed log replicator that utilizes a linearizable key-value store for leader election and coordination. Note in this example,
+all replicas redirect all read/write requests to the leader.
 
 ## Main Application (main.go)
 
