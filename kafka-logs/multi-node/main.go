@@ -29,11 +29,19 @@ func main() {
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
 		leader := replicator.GetLeader()
+		if len(leader) == 0 {
+			log.Panic("leader found to be empty")
+		}
 
-		var result int
+		log.Printf("[main] node %s log reads leader set to %s", replicator.Node.ID(), leader)
+
 		// Accept write request only if the node is the leader
 		if replicator.Node.ID() == leader {
-			result = replicator.Store.Set(key, val)
+			offset := replicator.Store.Set(key, val)
+			return replicator.Node.Reply(msg, map[string]any{
+				"type":   "send_ok",
+				"offset": offset,
+			})
 		} else {
 
 			// Delegate all writes to the `Leader`. Just `Send` wont work since writes and sync access to STDOUT.
@@ -48,33 +56,38 @@ func main() {
 			return replicator.Node.Reply(msg, resp.Body)
 		}
 
-		return replicator.Node.Reply(msg, map[string]any{
-			"type":   "send_ok",
-			"offset": result,
-		})
 	})
 
 	replicator.Node.Handle("poll", func(msg maelstrom.Message) error {
 
 		var body map[string]any
-
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
 			return err
 		}
 
-		offsetMap := body["offsets"].(map[string]any)
+		// Run the leader election algorithm before sending the requests
+		replicator.RunLeaderElection()
+		leader := replicator.GetLeader()
 
-		return replicator.Node.Reply(msg, map[string]any{
-			"type": "poll_ok",
-			"msgs": replicator.Store.Get(offsetMap),
-		})
+		if replicator.Node.ID() == leader {
+			offsetMap := body["offsets"].(map[string]any)
+			return replicator.Node.Reply(msg, map[string]any{
+				"type": "poll_ok",
+				"msgs": replicator.Store.Get(offsetMap),
+			})
+		} else {
+			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
+			if err != nil {
+				return err
+			}
+			return replicator.Node.Reply(msg, resp.Body)
+		}
 	})
 
 	replicator.Node.Handle("commit_offsets", func(msg maelstrom.Message) error {
 
 		var body map[string]any
-
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
 			return err
@@ -111,11 +124,24 @@ func main() {
 			return err
 		}
 
-		keys := body["keys"].([]any)
-		return replicator.Node.Reply(msg, map[string]any{
-			"type":    "list_committed_offsets_ok",
-			"offsets": replicator.Store.GetCommitedOffsets(keys),
-		})
+		// Run the leader election algorithm before sending the requests
+		replicator.RunLeaderElection()
+		leader := replicator.GetLeader()
+
+		if replicator.Node.ID() == leader {
+			keys := body["keys"].([]any)
+			return replicator.Node.Reply(msg, map[string]any{
+				"type":    "list_committed_offsets_ok",
+				"offsets": replicator.Store.GetCommitedOffsets(keys),
+			})
+		} else {
+			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
+			if err != nil {
+				return err
+			}
+			return replicator.Node.Reply(msg, resp.Body)
+		}
+
 	})
 
 	if err := replicator.Node.Run(); err != nil {

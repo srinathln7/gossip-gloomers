@@ -7,17 +7,16 @@ import (
 	"logs/internal/replicator"
 	"os"
 
-	"errors"
-
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
 
 func main() {
 
-	// Each node will get its own local kafka store and linearizable KV through their own instances of a replicator
+	// Each node will get its own local kafka store and linearizable KV
 	replicator := replicator.NewReplicator()
 
 	replicator.Node.Handle("send", func(msg maelstrom.Message) error {
+
 		var body map[string]any
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
@@ -27,6 +26,11 @@ func main() {
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
 		leader := replicator.GetLeader()
+		if len(leader) == 0 {
+			log.Panic("leader found to be empty")
+		}
+
+		log.Printf("[main] node %s log reads leader set to %s", replicator.Node.ID(), leader)
 
 		// Accept write request only if the node is the leader
 		if replicator.Node.ID() == leader {
@@ -43,8 +47,11 @@ func main() {
 					continue
 				}
 
-				log.Printf("propogating updates to the follower: %s", follower)
+				log.Printf("propogating update to the follower: %s  with (key, value) (%s, %d)", follower, key, val)
+
+				replicator.Mu.Lock()
 				resp, err := replicator.Node.SyncRPC(context.Background(), follower, body)
+				replicator.Mu.Unlock()
 				if err != nil {
 					log.Panicf("error %s while sending update to follower: %s", err.Error(), follower)
 					return err
@@ -56,7 +63,7 @@ func main() {
 				}
 
 				recvOffSet := int(respMap["offset"].(float64))
-				log.Println("checking for db consistency")
+				log.Println("checking for DB consistency")
 				if recvOffSet != offset {
 					log.Panicf("consistency error: leader sent %v while follower received %v", offset, recvOffSet)
 				}
@@ -67,11 +74,8 @@ func main() {
 				"offset": offset,
 			})
 		} else {
-
-			log.Println("redirecting all write requests to the leader")
 			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
 			if err != nil {
-				log.Panicf("error %s while sending update to leader: %s", err.Error(), leader)
 				return err
 			}
 			return replicator.Node.Reply(msg, resp.Body)
@@ -88,6 +92,7 @@ func main() {
 		val := int(body["msg"].(float64))
 		offset := replicator.Store.Set(key, val)
 
+		log.Printf("Follower received (key, value) (%s, %d)  from leader and calculated offset to be %d", key, val, offset)
 		return replicator.Node.Reply(msg, map[string]any{
 			"type":   "propogate_send_update_ok",
 			"offset": offset,
@@ -102,11 +107,13 @@ func main() {
 			return err
 		}
 
-		offsetMap := body["offsets"].(map[string]any)
-		return replicator.Node.Reply(msg, map[string]any{
-			"type": "poll_ok",
-			"msgs": replicator.Store.Get(offsetMap),
-		})
+		data := body["offsets"].(map[string]any)
+		res := replicator.Store.Get(data)
+
+		resp := make(map[string]any)
+		resp["type"] = "poll_ok"
+		resp["msgs"] = res
+		return replicator.Node.Reply(msg, resp)
 	})
 
 	replicator.Node.Handle("commit_offsets", func(msg maelstrom.Message) error {
@@ -120,9 +127,6 @@ func main() {
 		// Run the leader election algorithm before sending the requests
 		replicator.RunLeaderElection()
 		leader := replicator.GetLeader()
-		if leader == "" {
-			return errors.New("error: leader not yet set")
-		}
 
 		// Accept write request only if the node is the leader
 		if replicator.Node.ID() == leader {
@@ -152,24 +156,8 @@ func main() {
 				return err
 			}
 		}
-
 		return replicator.Node.Reply(msg, map[string]any{
 			"type": "commit_offsets_ok",
-		})
-	})
-
-	replicator.Node.Handle("propogate_commit_update", func(msg maelstrom.Message) error {
-		var body map[string]any
-		err := json.Unmarshal(msg.Body, &body)
-		if err != nil {
-			return err
-		}
-
-		offsetMap := body["offsets"].(map[string]any)
-		replicator.Store.CommitOffsets(offsetMap)
-
-		return replicator.Node.Reply(msg, map[string]any{
-			"type": "propogate_commit_update_ok",
 		})
 	})
 
@@ -188,8 +176,24 @@ func main() {
 		})
 	})
 
+	replicator.Node.Handle("propogate_commit_update", func(msg maelstrom.Message) error {
+		var body map[string]any
+		err := json.Unmarshal(msg.Body, &body)
+		if err != nil {
+			return err
+		}
+
+		offsetMap := body["offsets"].(map[string]any)
+		replicator.Store.CommitOffsets(offsetMap)
+
+		return replicator.Node.Reply(msg, map[string]any{
+			"type": "propogate_commit_update_ok",
+		})
+	})
+
 	if err := replicator.Node.Run(); err != nil {
 		log.Printf("error: %s", err)
 		os.Exit(1)
 	}
+
 }
