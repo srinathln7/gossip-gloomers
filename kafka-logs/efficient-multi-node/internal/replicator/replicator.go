@@ -32,6 +32,8 @@ func NewReplicator() *Replicator {
 
 func (r *Replicator) RunLeaderElection() {
 
+	// Only one goroutine can be here at a time (reading or writing).
+	// Perform write operations on shared resources.
 	r.Mu.Lock()
 	defer r.Mu.Unlock()
 
@@ -59,6 +61,10 @@ func (r *Replicator) RunLeaderElection() {
 }
 
 func (r *Replicator) GetLeader() string {
+
+	// Multiple goroutines can be here reading simultaneously.
+	// Perform read operations on shared resources.
+
 	r.Mu.RLock()
 	defer r.Mu.RUnlock()
 
