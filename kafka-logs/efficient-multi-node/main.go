@@ -16,8 +16,8 @@ func main() {
 	replicator := replicator.NewReplicator()
 
 	replicator.Node.Handle("send", func(msg maelstrom.Message) error {
-		var body map[string]any
 
+		var body map[string]any
 		err := json.Unmarshal(msg.Body, &body)
 		if err != nil {
 			return err
@@ -47,7 +47,7 @@ func main() {
 					continue
 				}
 
-				log.Printf("propogating updates to the follower: %s", follower)
+				log.Printf("propogating update to the follower: %s  with (key, value) (%s, %d)", follower, key, val)
 				resp, err := replicator.Node.SyncRPC(context.Background(), follower, body)
 				if err != nil {
 					log.Panicf("error %s while sending update to follower: %s", err.Error(), follower)
@@ -60,7 +60,7 @@ func main() {
 				}
 
 				recvOffSet := int(respMap["offset"].(float64))
-				log.Println("checking for db consistency")
+				log.Println("checking for DB consistency")
 				if recvOffSet != offset {
 					log.Panicf("consistency error: leader sent %v while follower received %v", offset, recvOffSet)
 				}
@@ -71,14 +71,12 @@ func main() {
 				"offset": offset,
 			})
 		} else {
-
 			resp, err := replicator.Node.SyncRPC(context.Background(), leader, body)
 			if err != nil {
 				return err
 			}
 			return replicator.Node.Reply(msg, resp.Body)
 		}
-
 	})
 
 	replicator.Node.Handle("propogate_send_update", func(msg maelstrom.Message) error {
@@ -91,6 +89,7 @@ func main() {
 		val := int(body["msg"].(float64))
 		offset := replicator.Store.Set(key, val)
 
+		log.Printf("Follower received (key, value) (%s, %d)  from leader and calculated offset to be %d", key, val, offset)
 		return replicator.Node.Reply(msg, map[string]any{
 			"type":   "propogate_send_update_ok",
 			"offset": offset,
@@ -104,9 +103,6 @@ func main() {
 		if err != nil {
 			return err
 		}
-
-		replicator.Mu.RLock()
-		defer replicator.Mu.RUnlock()
 
 		data := body["offsets"].(map[string]any)
 		res := replicator.Store.Get(data)
@@ -169,9 +165,6 @@ func main() {
 		if err != nil {
 			return err
 		}
-
-		replicator.Mu.RLock()
-		defer replicator.Mu.RUnlock()
 
 		keys := body["keys"].([]any)
 		return replicator.Node.Reply(msg, map[string]any{

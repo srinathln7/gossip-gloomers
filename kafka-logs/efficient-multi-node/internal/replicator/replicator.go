@@ -18,7 +18,6 @@ type Replicator struct {
 
 	Node  *maelstrom.Node
 	Store *store.KafkaStore
-	Mu    sync.RWMutex
 }
 
 func NewReplicator() *Replicator {
