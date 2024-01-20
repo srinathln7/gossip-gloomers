@@ -48,7 +48,10 @@ func main() {
 				}
 
 				log.Printf("propogating update to the follower: %s  with (key, value) (%s, %d)", follower, key, val)
+
+				replicator.Mu.Lock()
 				resp, err := replicator.Node.SyncRPC(context.Background(), follower, body)
+				replicator.Mu.Unlock()
 				if err != nil {
 					log.Panicf("error %s while sending update to follower: %s", err.Error(), follower)
 					return err

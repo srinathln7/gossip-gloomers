@@ -12,10 +12,10 @@ import (
 const CLUSTER_LEADER = "cluster_leader"
 
 type Replicator struct {
-	mu     sync.RWMutex
 	lv     *maelstrom.KV
 	leader string
 
+	Mu    sync.RWMutex
 	Node  *maelstrom.Node
 	Store *store.KafkaStore
 }
@@ -32,8 +32,8 @@ func NewReplicator() *Replicator {
 
 func (r *Replicator) RunLeaderElection() {
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.Mu.Lock()
+	defer r.Mu.Unlock()
 
 	// If the node finds in its local state that the leader has not been assigned yet,
 	// then contend for the election to become the leader
@@ -59,8 +59,8 @@ func (r *Replicator) RunLeaderElection() {
 }
 
 func (r *Replicator) GetLeader() string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.Mu.RLock()
+	defer r.Mu.RUnlock()
 
 	return r.leader
 }
