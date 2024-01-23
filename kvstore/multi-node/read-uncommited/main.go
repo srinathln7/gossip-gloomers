@@ -57,7 +57,6 @@ func main() {
 	})
 
 	node.Handle("gossip", func(msg maelstrom.Message) error {
-
 		var body map[string]any
 		if err := json.Unmarshal(msg.Body, &body); err != nil {
 			return err

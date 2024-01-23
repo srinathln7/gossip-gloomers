@@ -24,7 +24,10 @@ func NewKVStore() *kvStore {
 }
 
 func (kvs *kvStore) SetAndBroadcast(node *maelstrom.Node, key, val int) {
+	kvs.mu.Lock()
 	version := kvs.set(key, val)
+	kvs.mu.Unlock()
+
 	broadcast(node, key, val, version)
 }
 
@@ -46,9 +49,6 @@ func (kvs *kvStore) SyncLocal(key, val, version int) {
 
 func (kvs *kvStore) set(key, val int) int {
 	var version int
-	kvs.mu.Lock()
-	defer kvs.mu.Unlock()
-
 	if _, exists := kvs.store[key]; !exists {
 		version = 1
 	} else {
@@ -72,7 +72,6 @@ func (kvs *kvStore) Get(key int) *value {
 }
 
 func broadcast(node *maelstrom.Node, key, value, version int) {
-
 	var body map[string]any = make(map[string]any)
 	body["type"] = "gossip"
 	body["key"] = key
